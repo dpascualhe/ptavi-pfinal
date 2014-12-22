@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <account>
+    <username>shinji@ikari.com</username>
+  </account>
+  <uaserver>
+    <ip>127.0.0.1</ip>
+    <puerto>5067</puerto>
+  </uaserver>
+  <rtpaudio>
+    <puerto>4800</puerto>
+  </rtpaudio>
+  <log>
+    <path>/home/davidpascual/Final_PTAVI/ptavi-pfinal/log_ua1.txt</path>
+  </log>
+  <audio>
+    <path>/home/davidpascual/Final_PTAVI/ptavi-pfinal/cancion.mp3</path>
+  </audio>
+</config>

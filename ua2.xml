@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <account>
+    <username>rei@ayanami.com</username>
+  </account>
+  <uaserver>
+    <ip>127.0.0.1</ip>
+    <puerto>6067</puerto>
+  </uaserver>
+  <rtpaudio>
+    <puerto>4400</puerto>
+  </rtpaudio>
+  <log>
+    <path>/home/davidpascual/Final_PTAVI/ptavi-pfinal/log_ua2.txt</path>
+  </log>
+  <audio>
+    <path>/home/davidpascual/Final_PTAVI/ptavi-pfinal/cancion.mp3</path>
+  </audio>
+</config>
