@@ -1,19 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config>
-  <account>
-    <username>shinji@ikari.com</username>
+  <account username="shinji@ikari.com">
   </account>
-  <uaserver>
-    <ip>127.0.0.1</ip>
-    <puerto>5067</puerto>
+  <uaserver puerto="5067">
   </uaserver>
-  <rtpaudio>
-    <puerto>4800</puerto>
+  <rtpaudio puerto="4800">
   </rtpaudio>
-  <log>
-    <path>/home/davidpascual/Final_PTAVI/ptavi-pfinal/log_ua1.txt</path>
+  <regproxy ip="127.0.0.1" puerto="6000">
+  </regproxy>
+  <log path="/home/davidpascual/Final_PTAVI/ptavi-pfinal/log_ua1.txt">
   </log>
-  <audio>
-    <path>/home/davidpascual/Final_PTAVI/ptavi-pfinal/cancion.mp3</path>
+  <audio path="/home/davidpascual/Final_PTAVI/ptavi-pfinal/cancion.mp3">
   </audio>
 </config>
