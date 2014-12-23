@@ -59,7 +59,6 @@ class ConfigHandler(ContentHandler):
             self.audio = attrs.get('path',"")
             print "audio:" + self.audio
 
-
 def raise_error():
     """Procedimiento que eleva la excepcion"""
     print "Usage: python uaclient.py config method option"
@@ -87,7 +86,9 @@ if not METHOD in valid_methods:
 parser = make_parser()
 cHandler = ConfigHandler()
 parser.setContentHandler(cHandler)
+print "\033[93m"
 parser.parse(CONFIG_FILE)
+print "\033[0m"
 
 # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto.
 my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -107,17 +108,18 @@ elif METHOD == "INVITE":
     peticion += "o=" + cHandler.username + " " + cHandler.server_ip + "\r\n"
     peticion += "s=eva01\r\n"
     peticion += "t=0\r\n"
-    peticion += "audio " + str(cHandler.rtp_port) + " RTP\r\n"
+    peticion += "m=audio " + str(cHandler.rtp_port) + " RTP\r\n"
 elif METHOD == "BYE":
     peticion += OPTION + " SIP/2.0\r\n"
 
 # Enviamos la peticion
-print "Enviando: " + peticion
+print "\r\nEnviando:\r\n" + "\033[31m\033[01m" + peticion+ "\033[0m"
 my_socket.send(peticion + '\r\n')
 try:
     data = my_socket.recv(1024)
 except socket.error:
-    print "Error: No server listening at " + cHandler.regproxy_ip + ":", cHandler.regproxy_port
+    print "Error: No server listening at " + cHandler.regproxy_ip + ":", 
+    print cHandler.regproxy_port
     raise SystemExit
 
 # Procesamos la respuesta
