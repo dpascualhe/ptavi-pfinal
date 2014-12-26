@@ -6,6 +6,7 @@ en UDP simple
 """
 
 import SocketServer
+import socket
 import sys
 import time
 from xml.sax import make_parser
@@ -45,65 +46,6 @@ class ConfigHandler(ContentHandler):
             self.log = attrs.get('path',"")
             print "log:" + self.log
 
-"""
-class SIPRegisterHandler(SocketServer.DatagramRequestHandler):
-    ""
-    Clase para SIP register
-    ""
-
-    def handle(self):
-        ""
-        Manejador de los registros SIP
-        ""
-        while 1:
-            # Leemos lo que nos envía el cliente y lo separamos en lineas
-            peticion_string = self.rfile.read()
-            peticion_lines = peticion_string.split("\r\n")
-            peticion = peticion_lines[0].split(" ")
-
-            # Procesamos el REGISTER
-            if peticion[0] == "REGISTER":
-                self.sip_dir = peticion[1].split(":")[1]
-                clients[self.sip_dir] = self.client_address[0]
-                # Procesamos la cabecera 'expires'
-                cabecera = peticion_lines[1]
-                self.expire_sec = int(cabecera.split(" ")[1])
-                if self.expire_sec == 0:
-                    del clients[self.sip_dir]
-                # Enviamos OK
-                self.wfile.write("SIP/2.0 200 OK\r\n\r\n")
-
-            if not peticion_string:
-                break
-            print "El cliente nos manda " + peticion_string
-
-        # Imprimimos la dirección del cliente
-        print "Direccion cliente:", self.client_address, "\r\n\r\n"
-        self.register2file()
-
-    # Lleva un registro de los clientes conectados
-    def register2file(self):
-        ""
-        Crea el archivo que toma los registros de los usuarios
-        ""
-        # Abrimos el fichero...
-        fich = open('registered.txt', 'w')
-        fich.write('User\tIP\tExpires\r\n')
-
-        # Obtenemos el tiempo de expiración
-        expire = time.strftime('%Y-%m-%d %H:%M:%S',
-                                time.gmtime(time.time() + self.expire_sec))
-        clients[self.sip_dir] = [self.client_address[0], expire]
-
-        for client in clients.keys():
-            if clients[client][1] > time.strftime('%Y-%m-%d %H:%M:%S',
-                                                    time.gmtime(time.time())):
-                fich.write(client + '\t' + clients[client][0] +
-                            '\t' + clients[client][1] + '\r\n')
-            else:
-                del clients[client]
-        fich.close()
-"""
 
 class ServerHandler(SocketServer.DatagramRequestHandler):
     """
@@ -114,16 +56,11 @@ class ServerHandler(SocketServer.DatagramRequestHandler):
         line = mess.split("\r\n")
         # Envia los códigos de respuesta correspondientes
         while 1:
+            proxy = 0
             print "\r\nEl cliente nos manda:"
             print '\033[96m\033[01m' + mess + '\033[0m'
             word = line[0].split(' ')
-            if word[0] == 'INVITE':
-                respuesta = "SIP/2.0 100 Trying\r\n\r\n"
-                respuesta += "SIP/2.0 180 Ringing\r\n\r\n"
-                respuesta += "SIP/2.0 200 OK\r\n\r\n"
-            elif word[0] == 'BYE':
-                respuesta = "SIP/2.0 200 OK\r\n\r\n"
-            elif word[0] == 'REGISTER':
+            if word[0] == 'REGISTER':
                 client_name = word[1].split(":")[1]
                 client_ip = self.client_address[0]
                 client_port = word[1].split(":")[2]
@@ -139,16 +76,25 @@ class ServerHandler(SocketServer.DatagramRequestHandler):
                     # Enviamos OK
                     respuesta = "SIP/2.0 200 OK\r\n\r\n"
                 else:
-                    respuesta = "SIP/2.0 400 Bad Request"    
-            elif not word[0] in accepted:
-                respuesta = "SIP/2.0 405 Method Not Allowed"
+                    respuesta = "SIP/2.0 400 Bad Request\r\n\r\n"    
             else:
-                respuesta = "SIP/2.0 400 Bad Request"
-
+                if client_name in clients:
+                    proxy = 1
+                    respuesta = mess                  
+                    # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto.
+                    my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    my_socket.connect((clients[client_name][0], 
+                                        int(clients[client_name][1])))
+                else:
+                    respuesta = "SIP/2.0 404 User Not Found\r\n\r\n"
+                    
             # Imprimimos la respuesta enviada y la enviamos
-            if word[0] != 'ACK':
-                print 'Enviamos:' 
-                print '\033[31m\033[01m' + respuesta + '\033[0m'
+            print 'Enviamos a:' + client_name 
+            print '\033[31m\033[01m' + respuesta + '\033[0m'
+            if proxy:
+                my_socket.send(respuesta)
+            else:
                 self.wfile.write(respuesta)
 
             # Si no hay linea rompemos el bucle

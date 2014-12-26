@@ -79,19 +79,11 @@ def update_log(mess_type, mess_content, ip="", port=""):
     fich.write("\r\n")
 
 
-# Comprobamos si tenemos los argumentos correctos.
-if len(sys.argv) != 4:
-    raise_error()
-
 # Extraemos el fichero de configuración. Si no existe, elevamos la excepción.
 try:
     CONFIG_FILE = open(sys.argv[1])
 except IOError:
     raise_error()
-
-# Extraemos el método y la opción.
-METHOD = sys.argv[2]
-OPTION = sys.argv[3]
 
 # Manejamos el fichero de configuración
 parser = make_parser()
@@ -101,73 +93,85 @@ print "\033[93m"
 parser.parse(CONFIG_FILE)
 print "\033[0m"
 
-# Abrimos el fichero log
-fich = open(cHandler.log, 'a')
-update_log("other","Starting...")
+if __name__ == "__main__":
+    """
+    Programa principal
+    """
+    # Comprobamos si tenemos los argumentos correctos.
+    if len(sys.argv) != 4:
+        raise_error()
 
-# Creamos el socket, lo configuramos y lo atamos a un servidor/puerto.
-my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-my_socket.connect((cHandler.regproxy_ip, cHandler.regproxy_port))
+    # Extraemos el método y la opción.
+    METHOD = sys.argv[2]
+    OPTION = sys.argv[3]
 
-# Conformamos la petición.
-peticion = METHOD + " sip:" 
+    # Abrimos el fichero log
+    fich = open(cHandler.log, 'a')
+    update_log("other","Starting...")
 
-if METHOD == "REGISTER":    
-    peticion += cHandler.username + ":" + str(cHandler.server_port)
-    peticion += " SIP/2.0\r\n" + "Expires: " + OPTION + "\r\n"
-elif METHOD == "INVITE":
-    peticion += OPTION + " SIP/2.0\r\n"
-    peticion += "Content-Type: application/sdp\r\n\r\n"
-    peticion += "v=0\r\n"
-    peticion += "o=" + cHandler.username + " " + cHandler.server_ip + "\r\n"
-    peticion += "s=eva01\r\n"
-    peticion += "t=0\r\n"
-    peticion += "m=audio " + str(cHandler.rtp_port) + " RTP\r\n"
-elif METHOD == "BYE":
-    peticion += OPTION + " SIP/2.0\r\n"
+    # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto.
+    my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    my_socket.connect((cHandler.regproxy_ip, cHandler.regproxy_port))
 
-# Enviamos la peticion
-print "\r\nEnviando:\r\n" + "\033[31m\033[01m" + peticion+ "\033[0m"
-my_socket.send(peticion + '\r\n')
+    # Conformamos la petición.
+    peticion = METHOD + " sip:" 
 
-log_pet = " ".join(peticion.split("\r\n"))
-update_log('sent', log_pet, cHandler.regproxy_ip, str(cHandler.regproxy_port))
+    if METHOD == "REGISTER":    
+        peticion += cHandler.username + ":" + str(cHandler.server_port)
+        peticion += " SIP/2.0\r\n" + "Expires: " + OPTION + "\r\n"
+    elif METHOD == "INVITE":
+        peticion += OPTION + " SIP/2.0\r\n"
+        peticion += "Content-Type: application/sdp\r\n\r\n"
+        peticion += "v=0\r\n"
+        peticion += "o=" + cHandler.username + " " + cHandler.server_ip + "\r\n"
+        peticion += "s=eva01\r\n"
+        peticion += "t=0\r\n"
+        peticion += "m=audio " + str(cHandler.rtp_port) + " RTP\r\n"
+    elif METHOD == "BYE":
+        peticion += OPTION + " SIP/2.0\r\n"
 
-try:
-    data = my_socket.recv(1024)
-except socket.error:
-    error_str = "No server listening at " + cHandler.regproxy_ip + ":"
-    error_str += str(cHandler.regproxy_port)
-    print "Error: " + error_str
-    update_log('error', error_str)
-    update_log('other', "Finishing.")
-    raise SystemExit
+    # Enviamos la peticion
+    print "\r\nEnviando:\r\n" + "\033[31m\033[01m" + peticion+ "\033[0m"
+    my_socket.send(peticion + '\r\n')
 
-# Procesamos la respuesta
-log_rcv = " ".join(data.split("\r\n"))
-update_log('rcv', log_rcv, cHandler.regproxy_ip, str(cHandler.regproxy_port))
-
-line = data.split('\r\n\r\n')[:2]
-ack = 0
-if line == ["SIP/2.0 100 Trying", "SIP/2.0 180 Ring", "SIP/2.0 200 OK"]:
-    # Si todo va bien enviamos un ACK
-    respuesta = "ACK sip:" + sys.argv[2] + " SIP/2.0\r\n" + '\r\n'
-    my_socket.send(respuesta)
-    log_pet = " ".join(respuesta.split("\r\n"))
+    log_pet = " ".join(peticion.split("\r\n"))
     update_log('sent', log_pet, cHandler.regproxy_ip, str(cHandler.regproxy_port))
-    ack = 1
-elif line == ["SIP/2.0 400 Bad Request"]:
-    print "El servidor no entiende la petición"
-elif line == ["SIP/2.0 405 Method Not Allowed"]:
-    print "El servidor no entiende el método requerido"
 
-print 'Recibido -- \033[96m\033[01m', data, '\033[0m'
-if ack:
-    print 'Enviamos:' + respuesta
-update_log('other', "Finishing.")
-print "Terminando socket..."
+    try:
+        data = my_socket.recv(1024)
+    except socket.error:
+        error_str = "No server listening at " + cHandler.regproxy_ip + ":"
+        error_str += str(cHandler.regproxy_port)
+        print "Error: " + error_str
+        update_log('error', error_str)
+        update_log('other', "Finishing.")
+        raise SystemExit
 
-# Cerramos todo
-my_socket.close()
-print "Fin."
+    # Procesamos la respuesta
+    log_rcv = " ".join(data.split("\r\n"))
+    update_log('rcv', log_rcv, cHandler.regproxy_ip, str(cHandler.regproxy_port))
+
+    line = data.split('\r\n\r\n')[:2]
+    ack = 0
+    if line == ["SIP/2.0 100 Trying", "SIP/2.0 180 Ring", "SIP/2.0 200 OK"]:
+        # Si todo va bien enviamos un ACK
+        respuesta = "ACK sip:" + sys.argv[2] + " SIP/2.0\r\n" + '\r\n'
+        my_socket.send(respuesta)
+        log_pet = " ".join(respuesta.split("\r\n"))
+        update_log('sent', log_pet, cHandler.regproxy_ip, str(cHandler.regproxy_port))
+        ack = 1
+    elif line == ["SIP/2.0 400 Bad Request"]:
+        print "El servidor no entiende la petición"
+    elif line == ["SIP/2.0 405 Method Not Allowed"]:
+        print "El servidor no entiende el método requerido"
+
+    print 'Recibido -- \033[96m\033[01m', data, '\033[0m'
+    if ack:
+        print 'Enviamos:' + respuesta
+    update_log('other', "Finishing.")
+    print "Terminando socket..."
+
+    # Cerramos todo
+    my_socket.close()
+    print "Fin."
