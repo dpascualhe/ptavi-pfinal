@@ -162,7 +162,7 @@ elif line == ["SIP/2.0 400 Bad Request"]:
 elif line == ["SIP/2.0 405 Method Not Allowed"]:
     print "El servidor no entiende el método requerido"
 
-print 'Recibido -- ', data
+print 'Recibido -- \033[96m\033[01m', data, '\033[0m'
 if ack:
     print 'Enviamos:' + respuesta
 update_log('other', "Finishing.")

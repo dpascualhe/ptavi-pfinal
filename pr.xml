@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config>
   <server name="NERV" puerto="6000">
-  </account>
+  </server>
   <database path="database.txt">
   </database>
   <log path="log_pr.txt">
