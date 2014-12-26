@@ -8,6 +8,7 @@ import socket
 import sys
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
+import time
 
 
 class ConfigHandler(ContentHandler):
@@ -64,6 +65,19 @@ def raise_error():
     print "Usage: python uaclient.py config method option"
     raise SystemExit
 
+def update_log(mess_type, mess_content, ip="", port=""):
+    """Procedimiento que actualiza el fichero log"""
+    fich.write(time.strftime('%Y%m%d%H%M%S ', time.gmtime(time.time())))
+    if mess_type == "error":
+        fich.write("Error: " + mess_content)
+    elif mess_type == "other":
+        fich.write(mess_content)
+    elif mess_type == "sent":
+        fich.write("Sent to " + ip + ":" + port + " " + mess_content)
+    elif mess_type == "rcv":
+        fich.write("Received from " + ip + ":" + port + " " + mess_content)        
+    fich.write("\r\n")
+
 
 # Comprobamos si tenemos los argumentos correctos.
 if len(sys.argv) != 4:
@@ -75,12 +89,9 @@ try:
 except IOError:
     raise_error()
 
-# Extraemos el método y la opción y comprobamos si son válidos.
+# Extraemos el método y la opción.
 METHOD = sys.argv[2]
 OPTION = sys.argv[3]
-valid_methods = ["REGISTER", "INVITE", "BYE"]
-if not METHOD in valid_methods:
-    raise_error()
 
 # Manejamos el fichero de configuración
 parser = make_parser()
@@ -89,6 +100,10 @@ parser.setContentHandler(cHandler)
 print "\033[93m"
 parser.parse(CONFIG_FILE)
 print "\033[0m"
+
+# Abrimos el fichero log
+fich = open(cHandler.log, 'a')
+update_log("other","Starting...")
 
 # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto.
 my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -115,20 +130,32 @@ elif METHOD == "BYE":
 # Enviamos la peticion
 print "\r\nEnviando:\r\n" + "\033[31m\033[01m" + peticion+ "\033[0m"
 my_socket.send(peticion + '\r\n')
+
+log_pet = " ".join(peticion.split("\r\n"))
+update_log('sent', log_pet, cHandler.regproxy_ip, str(cHandler.regproxy_port))
+
 try:
     data = my_socket.recv(1024)
 except socket.error:
-    print "Error: No server listening at " + cHandler.regproxy_ip + ":", 
-    print cHandler.regproxy_port
+    error_str = "No server listening at " + cHandler.regproxy_ip + ":"
+    error_str += str(cHandler.regproxy_port)
+    print "Error: " + error_str
+    update_log('error', error_str)
+    update_log('other', "Finishing.")
     raise SystemExit
 
 # Procesamos la respuesta
+log_rcv = " ".join(data.split("\r\n"))
+update_log('rcv', log_rcv, cHandler.regproxy_ip, str(cHandler.regproxy_port))
+
 line = data.split('\r\n\r\n')[:2]
 ack = 0
 if line == ["SIP/2.0 100 Trying", "SIP/2.0 180 Ring", "SIP/2.0 200 OK"]:
     # Si todo va bien enviamos un ACK
     respuesta = "ACK sip:" + sys.argv[2] + " SIP/2.0\r\n" + '\r\n'
     my_socket.send(respuesta)
+    log_pet = " ".join(respuesta.split("\r\n"))
+    update_log('sent', log_pet, cHandler.regproxy_ip, str(cHandler.regproxy_port))
     ack = 1
 elif line == ["SIP/2.0 400 Bad Request"]:
     print "El servidor no entiende la petición"
@@ -138,6 +165,7 @@ elif line == ["SIP/2.0 405 Method Not Allowed"]:
 print 'Recibido -- ', data
 if ack:
     print 'Enviamos:' + respuesta
+update_log('other', "Finishing.")
 print "Terminando socket..."
 
 # Cerramos todo
