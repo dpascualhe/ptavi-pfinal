@@ -14,7 +14,7 @@ from xml.sax.handler import ContentHandler
 
 class ConfigHandler(ContentHandler):
     """
-    Clase para manejar chistes malos
+    Clase para manejar fichero de configuración
     """
 
     def __init__ (self):
@@ -60,8 +60,8 @@ class ServerHandler(SocketServer.DatagramRequestHandler):
             print "\r\nEl cliente nos manda:"
             print '\033[96m\033[01m' + mess + '\033[0m'
             word = line[0].split(' ')
+            client_name = word[1].split(":")[1]
             if word[0] == 'REGISTER':
-                client_name = word[1].split(":")[1]
                 client_ip = self.client_address[0]
                 client_port = word[1].split(":")[2]
                 # Procesamos la cabecera 'expires'
@@ -79,28 +79,32 @@ class ServerHandler(SocketServer.DatagramRequestHandler):
                     respuesta = "SIP/2.0 400 Bad Request\r\n\r\n"    
             else:
                 if client_name in clients:
-                    proxy = 1
-                    respuesta = mess                  
+                    proxy = 1                 
                     # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto.
                     my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                     my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     my_socket.connect((clients[client_name][0], 
                                         int(clients[client_name][1])))
+                    print 'Enviamos a:' + client_name 
+                    print '\033[31m\033[01m' + mess + '\033[0m'
+                    my_socket.send(mess)
+                    # Esperamos la respuesta y la reenviamos
+                    client_name = ''
+                    respuesta = my_socket.recv(1024)                   
                 else:
                     respuesta = "SIP/2.0 404 User Not Found\r\n\r\n"
-                    
+           
             # Imprimimos la respuesta enviada y la enviamos
-            print 'Enviamos a:' + client_name 
-            print '\033[31m\033[01m' + respuesta + '\033[0m'
-            if proxy:
-                my_socket.send(respuesta)
-            else:
+            if respuesta != "":
+                print 'Enviamos a:' + client_name 
+                print '\033[31m\033[01m' + respuesta + '\033[0m'
                 self.wfile.write(respuesta)
-
+            
             # Si no hay linea rompemos el bucle
             line = self.rfile.read()
             if not line:
-                break
+                break                    
+
 
     # Lleva un registro de los clientes conectados
     def register2file(self):

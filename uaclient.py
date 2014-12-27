@@ -9,6 +9,7 @@ import sys
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 import time
+import os
 
 
 class ConfigHandler(ContentHandler):
@@ -115,7 +116,8 @@ if __name__ == "__main__":
     my_socket.connect((cHandler.regproxy_ip, cHandler.regproxy_port))
 
     # Conformamos la petición.
-    peticion = METHOD + " sip:" 
+    peticion = METHOD + " sip:"
+    sdp = "" 
 
     if METHOD == "REGISTER":    
         peticion += cHandler.username + ":" + str(cHandler.server_port)
@@ -128,11 +130,12 @@ if __name__ == "__main__":
         peticion += "s=eva01\r\n"
         peticion += "t=0\r\n"
         peticion += "m=audio " + str(cHandler.rtp_port) + " RTP\r\n"
+        sdp = peticion.split('\r\n\r\n')[1]
     elif METHOD == "BYE":
         peticion += OPTION + " SIP/2.0\r\n"
 
     # Enviamos la peticion
-    print "\r\nEnviando:\r\n" + "\033[31m\033[01m" + peticion+ "\033[0m"
+    print "\r\nEnviando:\r\n" + "\033[31m\033[01m" + peticion + "\033[0m"
     my_socket.send(peticion + '\r\n')
 
     log_pet = " ".join(peticion.split("\r\n"))
@@ -152,11 +155,12 @@ if __name__ == "__main__":
     log_rcv = " ".join(data.split("\r\n"))
     update_log('rcv', log_rcv, cHandler.regproxy_ip, str(cHandler.regproxy_port))
 
-    line = data.split('\r\n\r\n')[:2]
+    line = data.split('\r\n\r\n')[:-2]
     ack = 0
-    if line == ["SIP/2.0 100 Trying", "SIP/2.0 180 Ring", "SIP/2.0 200 OK"]:
+    if line == ['SIP/2.0 100 Trying', 'SIP/2.0 180 Ringing', 
+                'SIP/2.0 200 OK\r\nContent-Type: application/sdp']:
         # Si todo va bien enviamos un ACK
-        respuesta = "ACK sip:" + sys.argv[2] + " SIP/2.0\r\n" + '\r\n'
+        respuesta = "ACK sip:" + sys.argv[3] + " SIP/2.0\r\n" + '\r\n'
         my_socket.send(respuesta)
         log_pet = " ".join(respuesta.split("\r\n"))
         update_log('sent', log_pet, cHandler.regproxy_ip, str(cHandler.regproxy_port))
@@ -168,7 +172,14 @@ if __name__ == "__main__":
 
     print 'Recibido -- \033[96m\033[01m', data, '\033[0m'
     if ack:
-        print 'Enviamos:' + respuesta
+        print "\r\nEnviando:\r\n" + "\033[31m\033[01m" + respuesta + "\033[0m"
+        # Envío de RTP
+        rtp_ip = sdp.split("\r\n")[1].split(" ")[1]
+        rtp_port = sdp.split("\r\n")[4].split(" ")[1]
+        rtp_send = "./mp32rtp -i " + rtp_ip + " -p " + rtp_port + " < " 
+        rtp_send += cHandler.audio
+        print "\033[98m\033[01mVamos a ejecutar " + rtp_send + '\033[0m'
+        os.system(rtp_send)
     update_log('other', "Finishing.")
     print "Terminando socket..."
 

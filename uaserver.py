@@ -17,6 +17,7 @@ class ServerHandler(SocketServer.DatagramRequestHandler):
     """
     def handle(self):
         mess = self.rfile.read()
+        global sdp
         # Envia los códigos de respuesta correspondientes
         while 1:
             print "\r\nEl cliente nos manda:"
@@ -41,18 +42,21 @@ class ServerHandler(SocketServer.DatagramRequestHandler):
             if word[0] != 'ACK':
                 print 'Enviamos:'
                 print '\033[31m\033[01m' + respuesta + '\033[0m'
-                my_socket.send(respuesta)
+                self.wfile.write(respuesta)
+            # Envío RTP
+            else:
+                rtp_ip = sdp.split("\r\n")[1].split(" ")[1]
+                rtp_port = sdp.split("\r\n")[4].split(" ")[1]
+                rtp_send = "./mp32rtp -i " + rtp_ip + " -p " + rtp_port + " < " 
+                rtp_send += uaclient.cHandler.audio
+                print "\033[98m\033[01mVamos a ejecutar " + rtp_send + '\033[0m'
+                os.system(rtp_send)
 
             # Si no hay linea rompemos el bucle
             mess = self.rfile.read()
             if not mess:
                 break
 
-        # Si recibimos un ACK procesamos el envío de audio
-        if word[0] == 'ACK':
-            rtp_send = "./mp32rtp -i 127.0.0.1 -p 23032 < " + sys.argv[3]
-            print "Vamos a ejecutar", rtp_send
-            os.system(rtp_send)
 
 def raise_error():
     """Procedimiento que eleva la excepcion"""
