@@ -16,25 +16,30 @@ class ServerHandler(SocketServer.DatagramRequestHandler):
     Server class
     """
     def handle(self):
+        # Recibimos un mensaje
         mess = self.rfile.read()
-        global sdp
+        uaclient.update_log ('rcv', mess, log_file, self.client_address[0],
+                              str(self.client_address[1]))
+       
         # Envia los códigos de respuesta correspondientes
+        global sdp
         while 1:
             print "\r\nEl cliente nos manda:"
             print '\033[96m\033[01m' + mess + '\033[0m'
             word = mess.split(' ')
-            if word[0] == 'INVITE':
-                sdp = mess.split('\r\n\r\n')[1]
-                respuesta = "SIP/2.0 100 Trying\r\n\r\n"
-                respuesta += "SIP/2.0 180 Ringing\r\n\r\n"
-                respuesta += "SIP/2.0 200 OK\r\n"
-                respuesta += "Content-Type: application/sdp\r\n\r\n"
-                respuesta += sdp
-                respuesta += "\r\n\r\n"
-            elif word[0] == 'BYE':
-                respuesta = "SIP/2.0 200 OK\r\n\r\n"
-            elif not word[0] in accepted:
-                respuesta = "SIP/2.0 405 Method Not Allowed\r\n\r\n"
+            if word[1].split(':')[0] == 'sip' and word[2][:7] == 'SIP/2.0':
+                if word[0] == 'INVITE':
+                    sdp = mess.split('\r\n\r\n')[1]
+                    respuesta = "SIP/2.0 100 Trying\r\n\r\n"
+                    respuesta += "SIP/2.0 180 Ringing\r\n\r\n"
+                    respuesta += "SIP/2.0 200 OK\r\n"
+                    respuesta += "Content-Type: application/sdp\r\n\r\n"
+                    respuesta += sdp
+                    respuesta += "\r\n\r\n"
+                elif word[0] == 'BYE':
+                    respuesta = "SIP/2.0 200 OK\r\n\r\n"
+                elif not word[0] in accepted:
+                    respuesta = "SIP/2.0 405 Method Not Allowed\r\n\r\n"
             else:
                 respuesta = "SIP/2.0 400 Bad Request\r\n\r\n"
 
@@ -42,6 +47,9 @@ class ServerHandler(SocketServer.DatagramRequestHandler):
             if word[0] != 'ACK':
                 print 'Enviamos:'
                 print '\033[31m\033[01m' + respuesta + '\033[0m'
+                uaclient.update_log ('send', respuesta, log_file, 
+                                        self.client_address[0],
+                                        str(self.client_address[1]))
                 self.wfile.write(respuesta)
             # Envío RTP
             else:
@@ -82,6 +90,9 @@ accepted = ['INVITE', 'ACK', 'BYE']
 
 # Damos permisos de ejecución al programa RTP
 os.system("chmod +x mp32rtp")
+
+# Renombramos el fichero log
+log_file = uaclient.cHandler.log
 
 # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto.
 my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

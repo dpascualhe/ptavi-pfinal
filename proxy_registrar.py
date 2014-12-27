@@ -85,18 +85,20 @@ class ServerHandler(SocketServer.DatagramRequestHandler):
                     my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     my_socket.connect((clients[client_name][0], 
                                         int(clients[client_name][1])))
-                    print 'Enviamos a:' + client_name 
+                    print 'Enviamos:'
                     print '\033[31m\033[01m' + mess + '\033[0m'
                     my_socket.send(mess)
                     # Esperamos la respuesta y la reenviamos
                     client_name = ''
-                    respuesta = my_socket.recv(1024)                   
+                    respuesta = my_socket.recv(1024) 
+                    print "\r\nEl cliente nos manda:"
+                    print '\033[96m\033[01m' + mess + '\033[0m'                  
                 else:
                     respuesta = "SIP/2.0 404 User Not Found\r\n\r\n"
            
             # Imprimimos la respuesta enviada y la enviamos
             if respuesta != "":
-                print 'Enviamos a:' + client_name 
+                print 'Enviamos:'
                 print '\033[31m\033[01m' + respuesta + '\033[0m'
                 self.wfile.write(respuesta)
             
