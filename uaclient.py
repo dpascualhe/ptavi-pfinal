@@ -153,11 +153,14 @@ if __name__ == "__main__":
 
     try:
         data = my_socket.recv(1024)
+        if data == "":
+            raise socket.error
     except socket.error:
-        error_str = "No server listening at " + cHandler.regproxy_ip + ":"
-        error_str += str(cHandler.regproxy_port)
-        print "Error: " + error_str
-        update_log('error', error_str, log_file)
+        if data !="":
+            error_str = "No server listening at " + cHandler.regproxy_ip + ":"
+            error_str += str(cHandler.regproxy_port)
+            print "Error: " + error_str
+            update_log('error', error_str, log_file)
         raise SystemExit
 
     # Procesamos la respuesta

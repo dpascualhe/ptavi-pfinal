@@ -47,7 +47,7 @@ class ServerHandler(SocketServer.DatagramRequestHandler):
             if word[0] != 'ACK':
                 print 'Enviamos:'
                 print '\033[31m\033[01m' + respuesta + '\033[0m'
-                uaclient.update_log ('send', respuesta, log_file, 
+                uaclient.update_log ('sent', respuesta, log_file, 
                                         self.client_address[0],
                                         str(self.client_address[1]))
                 self.wfile.write(respuesta)
