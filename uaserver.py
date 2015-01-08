@@ -18,9 +18,9 @@ class ServerHandler(SocketServer.DatagramRequestHandler):
     def handle(self):
         # Recibimos un mensaje
         mess = self.rfile.read()
-        uaclient.update_log ('rcv', mess, log_file, self.client_address[0],
-                              str(self.client_address[1]))
-       
+        uaclient.update_log('rcv', mess, log_file, self.client_address[0],
+                            str(self.client_address[1]))
+
         # Envia los códigos de respuesta correspondientes
         global sdp
         while 1:
@@ -47,17 +47,18 @@ class ServerHandler(SocketServer.DatagramRequestHandler):
             if word[0] != 'ACK':
                 print 'Enviamos:'
                 print '\033[31m\033[01m' + respuesta + '\033[0m'
-                uaclient.update_log ('sent', respuesta, log_file, 
-                                        self.client_address[0],
-                                        str(self.client_address[1]))
+                uaclient.update_log('sent', respuesta, log_file,
+                                    self.client_address[0],
+                                    str(self.client_address[1]))
                 self.wfile.write(respuesta)
             # Envío RTP
             else:
                 rtp_ip = sdp.split("\r\n")[1].split(" ")[1]
                 rtp_port = sdp.split("\r\n")[4].split(" ")[1]
-                rtp_send = "./mp32rtp -i " + rtp_ip + " -p " + rtp_port + " < " 
+                rtp_send = "./mp32rtp -i " + rtp_ip + " -p " + rtp_port + " < "
                 rtp_send += uaclient.cHandler.audio
-                print "\033[98m\033[01mVamos a ejecutar " + rtp_send + '\033[0m'
+                print "\033[98m\033[01mVamos a ejecutar " + rtp_send,
+                print '\033[0m'
                 os.system(rtp_send)
 
             # Si no hay linea rompemos el bucle
@@ -97,7 +98,8 @@ log_file = uaclient.cHandler.log
 # Creamos el socket, lo configuramos y lo atamos a un servidor/puerto.
 my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-my_socket.connect((uaclient.cHandler.regproxy_ip, uaclient.cHandler.regproxy_port))
+my_socket.connect((uaclient.cHandler.regproxy_ip,
+                   uaclient.cHandler.regproxy_port))
 
 # Creamos servidor y escuchamos
 serv = SocketServer.UDPServer(("", port), ServerHandler)

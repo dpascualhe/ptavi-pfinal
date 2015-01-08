@@ -16,7 +16,7 @@ class ConfigHandler(ContentHandler):
     """
     Clase para manejar chistes malos
     """
-    def __init__ (self):
+    def __init__(self):
         """
         Constructor. Inicializamos las variables
         """
@@ -36,29 +36,30 @@ class ConfigHandler(ContentHandler):
         """
         # Tomamos los valores de los atributos
         if name == 'account':
-            self.username = attrs.get('username',"")
+            self.username = attrs.get('username', "")
             print "username:" + self.username
         elif name == 'uaserver':
-            self.server_ip = attrs.get('ip',"")
+            self.server_ip = attrs.get('ip', "")
             if self.server_ip == "":
                 self.server_ip = "127.0.0.1"
-            self.server_port = int(attrs.get('puerto',""))
+            self.server_port = int(attrs.get('puerto', ""))
             print "server:" + self.server_ip + ":", self.server_port
         elif name == 'rtpaudio':
-            self.rtp_port = int(attrs.get('puerto',""))
+            self.rtp_port = int(attrs.get('puerto', ""))
             print "rtp:", self.rtp_port
         elif name == 'regproxy':
-            self.regproxy_ip = attrs.get('ip',"")
+            self.regproxy_ip = attrs.get('ip', "")
             if self.regproxy_ip == "":
                 self.server_ip = "127.0.0.1"
-            self.regproxy_port = int(attrs.get('puerto',""))
+            self.regproxy_port = int(attrs.get('puerto', ""))
             print "server:" + self.regproxy_ip + ":", self.regproxy_port
         elif name == 'log':
-            self.log = attrs.get('path',"")
+            self.log = attrs.get('path', "")
             print "log:" + self.log
         elif name == 'audio':
-            self.audio = attrs.get('path',"")
+            self.audio = attrs.get('path', "")
             print "audio:" + self.audio
+
 
 def raise_error():
     """
@@ -66,6 +67,7 @@ def raise_error():
     """
     print "Usage: python uaclient.py config method option"
     raise SystemExit
+
 
 def update_log(mess_type, mess_content, fich, ip="", port=""):
     """
@@ -84,7 +86,7 @@ def update_log(mess_type, mess_content, fich, ip="", port=""):
     elif mess_type == "sent":
         fich.write("Sent to " + ip + ":" + port + " " + log_mess)
     elif mess_type == "rcv":
-        fich.write("Received from " + ip + ":" + port + " " + log_mess)        
+        fich.write("Received from " + ip + ":" + port + " " + log_mess)
     fich.write("\r\n")
     # Cerramos el fichero log
     fich.close()
@@ -128,16 +130,16 @@ if __name__ == "__main__":
     peticion = METHOD + " sip:"
     sdp = ""
     bye = 0
-    if METHOD == "REGISTER":    
+    if METHOD == "REGISTER":
         peticion += cHandler.username + ":" + str(cHandler.server_port)
         peticion += " SIP/2.0\r\n" + "Expires: " + OPTION + "\r\n"
-        update_log("other","Starting...", log_file)
+        update_log("other", "Starting...", log_file)
     elif METHOD == "INVITE":
         peticion += OPTION + " SIP/2.0\r\n"
         peticion += "Content-Type: application/sdp\r\n\r\n"
         peticion += "v=0\r\n"
-        peticion += "o=" + cHandler.username + " " + cHandler.server_ip + "\r\n"
-        peticion += "s=eva01\r\n"
+        peticion += "o=" + cHandler.username + " " + cHandler.server_ip
+        peticion += "\r\n" + "s=eva01\r\n"
         peticion += "t=0\r\n"
         peticion += "m=audio " + str(cHandler.rtp_port) + " RTP\r\n"
         sdp = peticion.split('\r\n\r\n')[1]
@@ -149,14 +151,14 @@ if __name__ == "__main__":
     print "\r\nEnviando:\r\n" + "\033[31m\033[01m" + peticion + "\033[0m"
     my_socket.send(peticion + '\r\n')
     update_log('sent', peticion, log_file, cHandler.regproxy_ip,
-                str(cHandler.regproxy_port))
+               str(cHandler.regproxy_port))
 
     try:
         data = my_socket.recv(1024)
         if data == "":
             raise socket.error
     except socket.error:
-        if data !="":
+        if data ! = "":
             error_str = "No server listening at " + cHandler.regproxy_ip + ":"
             error_str += str(cHandler.regproxy_port)
             print "Error: " + error_str
@@ -165,17 +167,17 @@ if __name__ == "__main__":
 
     # Procesamos la respuesta
     update_log('rcv', data, log_file, cHandler.regproxy_ip,
-                str(cHandler.regproxy_port))
+               str(cHandler.regproxy_port))
     line_ack = data.split('\r\n\r\n')[:-2]
     line = data.split('\r\n\r\n')[0]
     ack = 0
-    if line_ack == ['SIP/2.0 100 Trying', 'SIP/2.0 180 Ringing', 
-                'SIP/2.0 200 OK\r\nContent-Type: application/sdp']:
+    if line_ack == ['SIP/2.0 100 Trying', 'SIP/2.0 180 Ringing',
+                    'SIP/2.0 200 OK\r\nContent-Type: application/sdp']:
         # Si todo va bien enviamos un ACK
         respuesta = "ACK sip:" + sys.argv[3] + " SIP/2.0\r\n" + '\r\n'
         my_socket.send(respuesta)
         update_log('sent', respuesta, log_file, cHandler.regproxy_ip,
-                    str(cHandler.regproxy_port))
+                   str(cHandler.regproxy_port))
         ack = 1
     elif line == "SIP/2.0 400 Bad Request":
         print "El servidor no entiende la petición"
@@ -187,17 +189,17 @@ if __name__ == "__main__":
         update_log('other', "Finishing.", log_file)
 
     print 'Recibido -- \033[96m\033[01m', data, '\033[0m'
-        
+
     if ack:
         print "\r\nEnviando:\r\n" + "\033[31m\033[01m" + respuesta + "\033[0m"
         # Envío de RTP
         rtp_ip = sdp.split("\r\n")[1].split(" ")[1]
         rtp_port = sdp.split("\r\n")[4].split(" ")[1]
-        rtp_send = "./mp32rtp -i " + rtp_ip + " -p " + rtp_port + " < " 
+        rtp_send = "./mp32rtp -i " + rtp_ip + " -p " + rtp_port + " < "
         rtp_send += cHandler.audio
         print "\033[98m\033[01mVamos a ejecutar " + rtp_send + '\033[0m'
         os.system(rtp_send)
- 
+
     print "Terminando socket..."
 
     # Cerramos todo
